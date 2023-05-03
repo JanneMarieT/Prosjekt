@@ -6,16 +6,16 @@ const AWS = require("aws-sdk");
 const s3 = new AWS.S3()
 const { requiresAuth } = require('express-openid-connect');
 
-// Or
+
 /* GET pictures listing. */
 router.get('/', requiresAuth(), async function(req, res, next) {
   var params = {
     Bucket: process.env.CYCLIC_BUCKET_NAME,
     Delimiter: '/',
-    Prefix: 'public/'
+    Prefix: req.oidc.user.nickname + '/'
   };
   var allObjects = await s3.listObjects(params).promise();
-  var keys = allObjects?.Contents.map( x=> x.Key).slice(0,3);
+  var keys = allObjects?.Contents.map( x=> x.Key)//.slice(0,3); 
   const pictures = await Promise.all(keys.map(async (key) => {
     let my_file = await s3.getObject({
       Bucket: process.env.CYCLIC_BUCKET_NAME,
@@ -31,11 +31,10 @@ router.get('/', requiresAuth(), async function(req, res, next) {
 
 router.post('/', requiresAuth(), async function(req, res, next) {
   const file = req.files.file;
-  console.log(req.files);
   await s3.putObject({
     Body: file.data,
     Bucket: process.env.CYCLIC_BUCKET_NAME,
-    Key: "public/" + file.name,
+    Key: req.oidc.user.nickname + "/" + file.name, //email is undefined...
   }).promise()
   res.end();
 });
